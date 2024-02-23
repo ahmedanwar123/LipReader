@@ -10,10 +10,7 @@ This project focuses on implementing Lip Reading using 3D convolution with Tenso
 - [Architecture](#architecture)
 - [Data Preparation](#data-preparation)
 - [Training](#training)
-- [Evaluation](#evaluation)
 - [Future Work](#future-work)
-- [Contribution](#contribution)
-- [License](#license)
 
 ## Required Libraries
 Before running the Lip Reader project, make sure to install the required libraries. You can install them using the following command:
@@ -60,6 +57,11 @@ Organize your dataset.
 Run the training script in the notebook.
 Evaluation
 Evaluate the trained model on a separate test set using the provided evaluation script in the notebook.
+
+## Streamlit App
+```bash
+streamlit run streamlitapp.py
+```
 
 ## Future Work
 Language Expansion: Include support for Arabic language lip reading.
