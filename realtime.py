@@ -63,7 +63,7 @@ def process_frame(frame):
     # Send the frame to the model for processing
     predictions = model.predict(normalized_frame)
 
-    # Decode the predictions
+    # Decode predictions
     decoded_predictions = tf.keras.backend.ctc_decode(predictions, input_length=[75], greedy=True)[0][0].numpy()
 
     # Display the frame with the predictions
