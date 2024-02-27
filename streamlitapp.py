@@ -18,7 +18,7 @@ with st.sidebar:
     st.title('LipReader')
     st.info('This application is developed from the LipReading deep learning model.')
 
-st.title('LipNet Full Stack App')
+st.title('LipBuddy App')
 # Generating a list of options or videos
 options = os.listdir(os.path.join('/media/ahmed/Metropolis/LipReader', 'data', 's1'))
 selected_video = st.selectbox('Choose video', options)
