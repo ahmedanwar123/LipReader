@@ -6,89 +6,79 @@ from matplotlib import pyplot as plt
 import imageio
 import os
 import gdown
-from typing import List
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv3D, LSTM, Dense, Dropout, Bidirectional, MaxPool3D, Activation, TimeDistributed, Flatten
 
-# Define char_to_num and num_to_char before using them
-vocab = [x for x in "abcdefghijklmnopqrstuvwxyz'?!123456789 "]
-char_to_num = tf.keras.layers.StringLookup(vocabulary=vocab, oov_token="")
-num_to_char = tf.keras.layers.StringLookup(
-    vocabulary=char_to_num.get_vocabulary(), oov_token="", invert=True
-)
+# Define vocabulary and lookup layers
+vocab = "abcdefghijklmnopqrstuvwxyz'?!123456789 "
+char_to_num = tf.keras.layers.StringLookup(vocabulary=list(vocab), oov_token="")
+num_to_char = tf.keras.layers.StringLookup(vocabulary=char_to_num.get_vocabulary(), oov_token="", invert=True)
 
-model = Sequential()
-model.add(Conv3D(128, 3, input_shape=(1, 140, 46, 128), padding='same'))
-model.add(Activation('relu'))
-model.add(MaxPool3D((1,2,2)))
-
-model.add(Conv3D(256, 3, padding='same'))
-model.add(Activation('relu'))
-model.add(MaxPool3D((1,2,2)))
-
-model.add(Conv3D(75, 3, padding='same'))
-model.add(Activation('relu'))
-model.add(MaxPool3D((1,2,2)))
-
-model.add(TimeDistributed(Flatten()))
-
-model.add(Bidirectional(LSTM(128, kernel_initializer='Orthogonal', return_sequences=True)))
-model.add(Dropout(.5))
-
-model.add(Bidirectional(LSTM(128, kernel_initializer='Orthogonal', return_sequences=True)))
-model.add(Dropout(.5))
-
-model.add(Dense(char_to_num.vocabulary_size()+1, kernel_initializer='he_normal', activation='softmax'))
+# Model definition 
+model = Sequential([
+    Conv3D(128, kernel_size=(3, 3, 3), activation='relu', input_shape=(10, 46, 140, 1), padding='same'),
+    MaxPool3D(pool_size=(1, 2, 2)),
+    Conv3D(256, kernel_size=(3, 3, 3), activation='relu', padding='same'),
+    MaxPool3D(pool_size=(1, 2, 2)),
+    Conv3D(75, kernel_size=(3, 3, 3), activation='relu', padding='same'),
+    MaxPool3D(pool_size=(1, 2, 2)),
+    TimeDistributed(Flatten()),
+    Bidirectional(LSTM(128, return_sequences=True)),
+    Dropout(0.5),
+    Bidirectional(LSTM(128, return_sequences=True)),
+    Dropout(0.5),
+    Dense(len(char_to_num.get_vocabulary())+1, activation='softmax')
+])
 
 model.summary()
 
-def process_frame(frame):
-    frame = tf.image.rgb_to_grayscale(frame)
-    frame = tf.image.resize(frame, [140, 46])
-    frame = frame[190:236, 80:220, :]
+def process_and_predict(frame_sequence):
+    # Preprocess the frames: Convert to grayscale, resize, normalize
+    processed_frames = np.array([tf.image.resize(tf.image.rgb_to_grayscale(f), [46, 140]) / 255.0 for f in frame_sequence])
+    
+    # Batch dimension
+    processed_frames = np.expand_dims(processed_frames, axis=0)  
 
-    # Normalize the frame
-    mean = tf.math.reduce_mean(frame)
-    std = tf.math.reduce_std(tf.cast(frame, tf.float32))
-    normalized_frame = tf.cast((frame - mean), tf.float32) / std
+    # Prediction
+    predictions = model.predict(processed_frames)
 
-    # Expand dimensions to match the model input shape
-    normalized_frame = tf.expand_dims(normalized_frame, axis=0)
-    normalized_frame = tf.expand_dims(normalized_frame, axis=-1)  # Add the channel dimension
+    # Decoding predictions
+    decoded_predictions = tf.keras.backend.ctc_decode(predictions, input_length=[predictions.shape[1]])[0][0].numpy()
 
-    # Pad the frame to match the expected shape
-    pad_size = [(0, 0), (0, 1), (0, 0), (0, 1)]  # Add padding to the second and last dimensions
-    normalized_frame = tf.pad(normalized_frame, pad_size)
+    # Convert numerical predictions to text using the num_to_char layer
+    prediction_text = tf.strings.reduce_join(num_to_char(decoded_predictions)).numpy().decode('utf-8')
 
-    # Send the frame to the model for processing
-    predictions = model.predict(normalized_frame)
+    return prediction_text
 
-    # Decode predictions
-    decoded_predictions = tf.keras.backend.ctc_decode(predictions, input_length=[75], greedy=True)[0][0].numpy()
+# Parameters for frame sequence
+sequence_length = 10  # Number of frames in a sequence (using gpu we can get more)
+frame_sequence = []  # Store frames
 
-    # Display the frame with the predictions
-    cv2.putText(frame, tf.strings.reduce_join([num_to_char(word) for word in decoded_predictions]).numpy().decode('utf-8'),
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    return frame
-
-
-# OpenCV video capture
-cap = cv2.VideoCapture(0)  # Use 0 for default camera, or specify video file path
+cap = cv2.VideoCapture(0) 
 
 while True:
-    # _, frame = cap.read()
     ret, frame = cap.read()
+    if not ret:
+        break  # Exit if unable to capture a frame
 
-    # Break the loop
+    # Display the live feed for real-time visualization
+    cv2.imshow('Live LipRead', frame)
+
+    # Append the captured frame to our sequence
+    if len(frame_sequence) < sequence_length:
+        frame_sequence.append(frame)
+    else:
+        # Process and predict the collected frame sequence
+        prediction_text = process_and_predict(frame_sequence)
+
+        # Display the prediction result
+        print("Predicted Text:", prediction_text)
+
+        # Clear frame sequence to start collecting a new sequence
+        frame_sequence = []
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-    # Process the frame using the model
-    processed_frame = process_frame(frame)
-
-    # Display the processed frame
-    cv2.imshow('Video', processed_frame)
+        break 
 
 cap.release()
 cv2.destroyAllWindows()
