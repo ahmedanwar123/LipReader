@@ -9,7 +9,7 @@ from io import BytesIO
 from utils import load_data, num_to_char
 from modelutil import load_model
 
-# Set the layout to the Streamlit app as wide
+# Set the layout to wide
 st.set_page_config(layout='wide')
 
 # Setup the sidebar
@@ -45,7 +45,7 @@ if options:
         # Set environment variable to use CPU
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-        # Save frames using imageio
+        # Save frames
         frames = []
         for frame in video:
             # Convert EagerTensor to NumPy array and convert to RGB format

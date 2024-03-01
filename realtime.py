@@ -61,7 +61,7 @@ while True:
     if not ret:
         break  # Exit if unable to capture a frame
 
-    # Display the live feed for real-time visualization
+    # R eal-time visualization
     cv2.imshow('Live LipRead', frame)
 
     # Append the captured frame to our sequence
