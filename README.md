@@ -48,7 +48,7 @@ jupyter notebook LipReader.ipynb
 The lip reading model architecture utilizes a 3D convolutional neural network (CNN) for feature extraction from video frames. The model is trained on a dataset of labeled lip movement sequences.
 
 ## Data Preparation
-Prepare your training data by organizing video sequences and corresponding labels. The dataset should include English language speakers showcasing various lip movements.
+Preparing training data by organizing video sequences and corresponding labels. The dataset should include English language speakers showcasing various lip movements.
 
 ## Training
 To train the model, follow these steps:
